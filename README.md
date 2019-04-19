@@ -1,6 +1,5 @@
 # CS342_Project5
-OK!!! so a game. What are some ideas?? 
-Levi: Guess a string (very easy- already functions for it) 
-Trishla: biggest number wins (you have number cards, highest card in the round wins, if the top cards are the same they cancel and the next highest wins and so forth) 
+OK!!! so a game. Guess the number. 
+Multiple clients can connect. The server randomly generates a number between 1 to 100 inclusive. 
+The clients guess. The serves replies back higher or lower. First one to correctly guess the number wins. 
 
-Other ideas??
