@@ -1,63 +1,183 @@
-package sample;
+//package sample;
 
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.application.Application;
-import javafx.geometry.Pos;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.util.Vector;
+import java.io.*;
+import java.net.*;
+import java.util.HashMap;
+import java.util.function.Consumer;
 
-public class driverClass extends Application {
+public class ClientConnection extends Application {
+
+    //instance of the client class
+    Client myClient;
 
     TextField text;
     Button button;
     Stage myStage;
-    Scene scene, scene2;
+    Scene scene;
+    Text hintText;
     HashMap<String, Scene> sceneMap;
+    boolean inGame = false;
 
-    public static void main(String[] args) {
-
-        launch(args);
-    }
+    //funciton we will use to update gui
+    Consumer<Serializable> updateGUI;
 
     public void start(Stage primaryStage) throws Exception {
 
-        primaryStage.setTitle("Get ready to guess");
+        //initializing hashmap
+        sceneMap = new HashMap();
 
+        //function that we send for the gui
+        updateGUI = x -> {
+          if( x instanceof String){
+              String message = (String)x;
+              //if we receieve a win from the server then we won
+              if(message.contains("win")){
+                  inGame = false;
+                  hintText.setText( "YOu won the game congratulations Winner ;) winky face");
+              }
+              //if we receive a lose from the serve then we lose
+              else if(message.contains("lose")){
+                  inGame = false;
+                  hintText.setText("You lost the game loser hahahaha pathetic");
+              }
+              //game starting message
+              else if(message.contains("game")){
+                  inGame = true;
+                  button.setDisable(false);
+              }
+              //update the message based on what the message says
+              else{
+                  hintText.setText(hintText.getText() + "\n" + message);
+              }
+          }
+        };
+
+        //setting the client equal to something that way we actually do something
+        myClient = new Client("127.0.0.1",5555,updateGUI);
+
+        //creating our stage that way we can do our stuff
         myStage = primaryStage;
 
+        //setting the title of our stage
+        myStage.setTitle("Get ready to guess");
+
         button = new Button("Guess!");
+        text = new TextField();
+        hintText = new Text("We still haven't started the game! Make some friends!");
 
-        button.setOnAction(new EventHandler<ActionEvent>() {
-
-            public void handle(ActionEvent event) {
-
+        button.setOnAction(event -> {
+            //if we are in the game we enter this statement
+            if(inGame){
+                button.setDisable(true);
+                //calling this function creates an exception so I guess we surround it with try catch
+                //here we are sending the guess
+                try {
+                    myClient.send(text.getText());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
+            else{
+                //we are not in the game so we literally do nothing
+                //do nothing
+            }
+            //here we should say we did something
+            //if we are in a game then we do something otherwise we don't
         });
+
+        //I am guessing this starts the thread and begins listening to our man below
+        myClient.startConn();
 
         BorderPane pane = new BorderPane();
         pane.setPadding(new Insets(60));
 
-        VBox paneCenter = new VBox(15, text, button);
+        VBox paneCenter = new VBox(15, hintText,text, button);
 
         pane.setCenter(paneCenter);
 
         scene = new Scene(pane, 400, 500);
-        scene2 = new Scene(paneCenter, 200, 300);
 
         sceneMap.put("Guessing Game", scene);
-        sceneMap.put("Where To Play", scene2);
 
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        myStage.setScene(scene);
+        myStage.show();
     }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    //when we close the gui I think we should call the closeConn function
+
+    //THis is the client code where we will be handling networking
+    class Client {
+
+        private ConnThread connthread = new ConnThread();
+        private Consumer<Serializable> callback;
+        private String ip;
+        private int port;
+
+        public Client(String ip, int port, Consumer<Serializable> data) {
+            this.callback = data;
+            connthread.setDaemon(true);
+            this.ip = ip;
+            this.port = port;
+        }
+
+        public void startConn() throws Exception{
+            connthread.start();
+        }
+
+        public void send(Serializable data) throws Exception{
+            connthread.out.writeObject(data);
+        }
+
+        public void closeConn() throws Exception{
+            connthread.socket.close();
+        }
+
+        public String getIP() {
+            return this.ip;
+        }
+
+        public int getPort() {
+            return this.port;
+        }
+
+        class ConnThread extends Thread{
+            private Socket socket;
+            private ObjectOutputStream out;
+
+            public void run() {
+                try(Socket socket = new Socket(getIP(), getPort());
+                    ObjectOutputStream out = new ObjectOutputStream( socket.getOutputStream());
+                    ObjectInputStream in = new ObjectInputStream(socket.getInputStream())){
+
+                    this.socket = socket;
+                    this.out = out;
+                    //I literally have no clue what this does - Levi wrote this comment and the next one not this line of code
+                    //ellen probably does
+                    socket.setTcpNoDelay(true);
+
+                    while(true) {
+                        Serializable data = (Serializable) in.readObject();
+                        callback.accept(data);
+                    }
+
+                }
+                catch(Exception e) {
+                    callback.accept("connection closed");
+                }
+            }
+        }//end of connthread
+    }//end of client which is where the threading occurs
 }
