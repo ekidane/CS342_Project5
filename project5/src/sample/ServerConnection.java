@@ -1,11 +1,15 @@
+
 package sample;
 
 //so many imports!
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+
+import java.io.IOException;
 import java.util.Random;
 import java.util.function.Consumer;
 import javafx.scene.media.AudioClip;
@@ -38,6 +42,7 @@ public class ServerConnection extends Application {
     //textfield that tells us the number of clients connected
     static Text clientsConnected;
     Text hintText ;
+    Button startGame;
 
     //function that updates the GUI
     Consumer<String> updateGUI;
@@ -50,15 +55,44 @@ public class ServerConnection extends Application {
 
         myStage = primaryStage;
         //on button press we do the following
-        //neatMusic = new AudioClip(getClass().getResource("neatMusic.mp3").toString());
-//        neatMusic.play();
+        neatMusic = new AudioClip(this.getClass().getResource("neatMusic.mp3").toString());
+        neatMusic.play();
 
-        hintText.setText(whichHintText());
+        hintText = new Text((whichHintText()));
+        //should in theory work! I have no idea why it doesn't
+        startGame = new Button("Push this to start the game!");
+
+        //event handler for the button
+        startGame.setOnAction(event -> {
+            if(serverThread.numOfPlayers >= 4){
+                for(ConnThread randThread: serverThread.connections){
+                    try {
+                        randThread.out.writeObject("game");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                //send game start to every one
+                startGame.setDisable(true);
+            }
+        });
 
         //we are defining the updateGUI function
         updateGUI = textSend -> {
             //if someone won the game or if everyone has guessed then we enable the button to be play
-            if(textSend.contains("win") || numberGuesses == numActivePlayers){
+            if(textSend.contains("win") ){
+                hintText.setText("The clients have won uwu");
+                startGame.setDisable(false);
+                //enable a button to be pushed which starts the game if we have more than four players
+                //probably say something like the client won
+                //reset the number of guesses
+                numberGuesses = 0;
+                //get a new random number
+                randomNumber = rand.nextInt() % 200;
+            }
+            else if( numberGuesses == numActivePlayers){
+                hintText.setText("The clients have lose ahahahha");
+                startGame.setDisable(false);
                 //enable a button to be pushed which starts the game if we have more than four players
                 //probably say something like the client won
                 //reset the number of guesses
@@ -68,8 +102,7 @@ public class ServerConnection extends Application {
             }
             //probably right here put some text in the server saying what the next hint will be based on current hint
             else{
-                //update hint text in the server
-                //increase number of guesses
+                hintText.setText(whichHintText());
                 ++numberGuesses;
             }
         };
@@ -77,7 +110,10 @@ public class ServerConnection extends Application {
         //pass the function that update the text to the serverThread
         myServer = new serverThread(updateGUI);
 
-        BorderPane pane = new BorderPane();
+        BorderPane pane = new BorderPane(hintText);
+        pane.setBottom(clientsConnected);
+        //should work because there is no reason it shouldn't
+        pane.setTop(startGame);
 
         activatingServer();
         myStage.setScene(new Scene(pane,500,500));
@@ -107,13 +143,13 @@ public class ServerConnection extends Application {
             return "Telling client if the server is divisible by the server number!";
         }
         else if(whichHint == 1){
-            return "something3";
+            return "Telling client if the sum of the digits of their number is more or less than the server number!";
         }
         else if(whichHint == 2){
-            return "something2";
+            return "Telling client if the server number is smaller or bigger than their guess!";
         }
         else {
-            return "something3";
+            return "Telling client how many digits match in their guess to the server number!";
         }
 
     }
@@ -121,5 +157,3 @@ public class ServerConnection extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-
-}//end of application
