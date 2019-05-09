@@ -73,7 +73,8 @@ public class Client {
 
             }
             catch(Exception e) {
-                callback.accept("connection closed");
+                 e.printStackTrace();
+                //callback.accept("connection closed");
             }
         }
     }
