@@ -1,12 +1,16 @@
-//package sample;
+package sample;
 
 //so many imports!
 import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import java.util.Random;
 import java.util.function.Consumer;
+import javafx.scene.media.AudioClip;
 
+//I likely just need to throw in the things for the client to see stuff and we are gucci
 public class ServerConnection extends Application {
 
     //this is the server we are going to be using maybe I should be making this an array or something
@@ -25,7 +29,7 @@ public class ServerConnection extends Application {
     static int previousHint = 0;
 
     //number of guesses made
-    int numberGuesses = 0;
+    static int numberGuesses = 0;
 
     //number of active players i.e number of players in a game I think I might need this somewhere
     //when we start the game set numActivePlayers equal to numPlayers
@@ -33,11 +37,23 @@ public class ServerConnection extends Application {
 
     //textfield that tells us the number of clients connected
     static Text clientsConnected;
+    Text hintText ;
 
     //function that updates the GUI
     Consumer<String> updateGUI;
+    AudioClip neatMusic;
+    Stage myStage ;
 
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws Exception{
+
+        clientsConnected = new Text("Here we show when a client has connected");
+
+        myStage = primaryStage;
+        //on button press we do the following
+        //neatMusic = new AudioClip(getClass().getResource("neatMusic.mp3").toString());
+//        neatMusic.play();
+
+        hintText.setText(whichHintText());
 
         //we are defining the updateGUI function
         updateGUI = textSend -> {
@@ -61,7 +77,11 @@ public class ServerConnection extends Application {
         //pass the function that update the text to the serverThread
         myServer = new serverThread(updateGUI);
 
+        BorderPane pane = new BorderPane();
+
         activatingServer();
+        myStage.setScene(new Scene(pane,500,500));
+        myStage.show();
     }
 
     //when they push a button and there are more than 4 players
@@ -80,6 +100,22 @@ public class ServerConnection extends Application {
     @Override
     public void stop(){
         myServer.letsClose();
+    }
+
+    String whichHintText(){
+        if(whichHint == 0){
+            return "Telling client if the server is divisible by the server number!";
+        }
+        else if(whichHint == 1){
+            return "something3";
+        }
+        else if(whichHint == 2){
+            return "something2";
+        }
+        else {
+            return "something3";
+        }
+
     }
 
     public static void main(String[] args) {
